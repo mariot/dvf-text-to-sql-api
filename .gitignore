@@ -18,3 +18,4 @@ runs/scratch*
 
 # Eval run progress logs
 runs/*.log
+runs/*.pid
