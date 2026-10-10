@@ -15,3 +15,6 @@ wheels/
 # Scratch eval runs. Name a run runs/<something>.jsonl and commit it on purpose
 # when it becomes a reference (e.g. runs/baseline-v0.1.jsonl).
 runs/scratch*
+
+# Eval run progress logs
+runs/*.log

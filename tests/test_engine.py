@@ -158,6 +158,7 @@ def test_api_options() -> None:
     assert call["thinking"] == {"type": "adaptive"}
     assert call["output_config"] == {"effort": "high"}
     assert call["cache_control"] == {"type": "ephemeral"}
+    assert call["system"][0]["cache_control"] == {"type": "ephemeral"}
     assert [t["name"] for t in call["tools"]] == ["run_sql", "submit_answer"]
 
     client = FakeClient(

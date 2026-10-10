@@ -167,10 +167,14 @@ class Engine:
         return self.client.messages.create(
             model=self.model,
             max_tokens=self.max_tokens,
-            system=[{"type": "text", "text": system}],
+            # Breakpoint 1: tools + system prompt, identical for every question,
+            # so it is written once and shared across questions.
+            system=[
+                {"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}
+            ],
             tools=TOOLS,
             messages=messages,
-            # Caches the growing prefix (system + schema + earlier turns).
+            # Breakpoint 2 (automatic, last block): this question's earlier turns.
             cache_control={"type": "ephemeral"},
             **options,
         )
