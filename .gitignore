@@ -1,0 +1,17 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Local settings (API key)
+.env
+
+# Scratch eval runs. Name a run runs/<something>.jsonl and commit it on purpose
+# when it becomes a reference (e.g. runs/baseline-v0.1.jsonl).
+runs/scratch*

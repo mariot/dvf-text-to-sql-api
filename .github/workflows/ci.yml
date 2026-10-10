@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Ruff (check + format)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+      # The version matches the pin in pyproject.toml.
+      - run: uvx ruff@0.16.10 check .
+      - run: uvx ruff@0.16.10 format --check .
+
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.14"
+      # No DVF database and no API key in CI: the database tests skip, and the
+      # engine tests use a scripted fake Claude.
+      - run: uv sync --locked --extra dev
+      - run: uv run pytest -v

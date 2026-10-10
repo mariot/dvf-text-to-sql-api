@@ -1,0 +1,65 @@
+import pytest
+
+from dvf_sql.guard import UnsafeSQLError, check_sql
+
+ALLOWED = [
+    "SELECT count(*) FROM dvf.ventes WHERE annee = 2024 AND est_vente",
+    "SELECT nom_commune FROM ventes",  # search_path = dvf
+    (
+        "WITH t AS (SELECT annee, count(*) AS n FROM dvf.ventes GROUP BY 1) "
+        "SELECT annee, n, n - lag(n) OVER (ORDER BY annee) FROM t"
+    ),
+    "SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY prix_m2) FROM dvf.ventes",
+    (
+        "SELECT count(*) FROM dvf.ventes v, dvf.lieux l "
+        "WHERE l.nom = 'Gare Saint-Jean' AND ST_DWithin(v.geom, l.geom, 1000)"
+    ),
+    "SELECT ST_X(ST_Transform(geom, 4326)) FROM dvf.biens LIMIT 1",
+    "SELECT x FROM generate_series(1, 3) AS g(x)",
+    "SELECT 1 UNION ALL SELECT 2",
+    "SELECT v.code_commune FROM dvf.ventes v JOIN dvf.zones z USING (code_commune)",
+    "SELECT * FROM dvf.communes WHERE nom_commune ILIKE 'saint-m%'",
+]
+
+REJECTED = [
+    ("SELECT 1; DROP TABLE dvf.ventes", "exactly one statement"),
+    ("DELETE FROM dvf.ventes WHERE annee = 2021", "only queries"),
+    ("UPDATE dvf.ventes SET valeur_fonciere = 1", "only queries"),
+    ("WITH d AS (DELETE FROM dvf.ventes RETURNING *) SELECT * FROM d", "Delete"),
+    ("SELECT * INTO copie FROM dvf.ventes", "Into"),
+    ("SELECT * FROM dvf.ventes FOR UPDATE", "Lock"),
+    ("COPY (SELECT 1) TO '/tmp/x'", "only queries"),
+    ("CREATE TABLE t AS SELECT 1", "only queries"),
+    ("EXPLAIN ANALYZE SELECT 1", "only queries"),
+    ("SELECT pg_sleep(600)", "pg_sleep"),
+    ("SELECT pg_catalog.pg_read_file('/etc/passwd')", "pg_read_file"),
+    ("SELECT lo_import('/etc/passwd')", "lo_import"),
+    ("SELECT * FROM dblink('h', 'select 1') AS t(a int)", "dblink"),
+    ("SELECT set_config('transaction_read_only', 'off', true)", "set_config"),
+    ("SELECT version()", "not allowed"),
+    ("SELECT inet_server_addr()", "inet_server_addr"),
+    ("SELECT usename, passwd FROM pg_shadow", "pg_shadow"),
+    ("SELECT * FROM information_schema.tables", "information_schema"),
+    ("SELECT * FROM dvf.mutations", "dvf.mutations"),
+    ("SELECT * FROM dvf.load_log", "load_log"),
+    ("SELECT * FROM public.ventes", "public.ventes"),
+    ("SELEC nonsense", "only queries|could not parse"),
+]
+
+
+@pytest.mark.parametrize("sql", ALLOWED)
+def test_allowed(sql: str) -> None:
+    assert check_sql(sql) == sql
+
+
+@pytest.mark.parametrize(("sql", "reason"), REJECTED)
+def test_rejected(sql: str, reason: str) -> None:
+    with pytest.raises(UnsafeSQLError, match=reason):
+        check_sql(sql)
+
+
+def test_cte_name_cannot_shadow_a_schema_table() -> None:
+    # A CTE named like a forbidden table is fine; a schema-qualified one is not.
+    check_sql("WITH mutations AS (SELECT 1 AS a) SELECT a FROM mutations")
+    with pytest.raises(UnsafeSQLError):
+        check_sql("WITH mutations AS (SELECT 1 AS a) SELECT * FROM dvf.mutations")
