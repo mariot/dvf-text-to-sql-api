@@ -1,6 +1,6 @@
 [project]
 name = "dvf-text-to-sql-api"
-version = "0.1.0"
+version = "0.2.0"
 description = "Text-to-SQL over French property sales (DVF, Gironde), scored on dvf-text-to-sql-eval"
 authors = [
     { name = "Mariot Tsitoara", email = "mariot.tsitoara@filigran.io" }

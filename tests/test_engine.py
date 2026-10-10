@@ -75,7 +75,8 @@ def test_explore_then_answer() -> None:
 
     assert answer.behavior == "answer"
     assert (answer.columns, answer.rows) == (["n"], [[29200]])
-    assert answer.executed_sql == [COUNT, COUNT] == db.ran
+    assert answer.executed_sql == [COUNT] == db.ran  # seen: not run twice
+    assert answer.engine_version
     assert answer.turns == 2
     assert answer.usage["input_tokens"] == 200
     assert answer.usage["cache_read_input_tokens"] == 100
@@ -112,12 +113,52 @@ def test_unsafe_sql_is_never_sent_to_the_database() -> None:
     assert result["is_error"] and "rejected before execution" in result["content"]
 
 
+def test_unseen_final_sql_is_shown_before_it_is_accepted() -> None:
+    # The model submits a query it never ran, with a guessed figure.
+    client = FakeClient(
+        reply(tool_use("submit_answer", behavior="answer", message="125", sql=COUNT)),
+        reply(
+            tool_use(
+                "submit_answer", "t2", behavior="answer", message="29 200", sql=COUNT
+            )
+        ),
+    )
+    db = FakeDb()
+    answer = engine(client, db).ask("Combien de ventes en 2024 ?")
+    assert answer.behavior == "answer"
+    assert answer.message == "29 200"  # from the resubmit, not the guess
+    assert answer.turns == 2
+    assert db.ran == [COUNT]  # run once, then reused
+    shown = client.calls[1]["messages"][-1]["content"][0]
+    assert not shown["is_error"]
+    assert "not_accepted_yet" in shown["content"] and "29200" in shown["content"]
+
+
+def test_whitespace_and_semicolon_do_not_count_as_a_new_query() -> None:
+    client = FakeClient(
+        reply(tool_use("run_sql", sql=COUNT)),
+        reply(
+            tool_use(
+                "submit_answer",
+                "t2",
+                behavior="answer",
+                message="ok",
+                sql=f"  {COUNT};\n",
+            )
+        ),
+    )
+    answer = engine(client).ask("?")
+    assert answer.behavior == "answer"
+    assert answer.turns == 2
+
+
 def test_failed_final_sql_goes_back_to_the_model() -> None:
     bad = "SELECT nope FROM dvf.ventes"
     client = FakeClient(
         reply(tool_use("submit_answer", behavior="answer", message="?", sql=bad)),
+        reply(tool_use("run_sql", "t2", sql=COUNT)),
         reply(
-            tool_use("submit_answer", "t2", behavior="answer", message="ok", sql=COUNT)
+            tool_use("submit_answer", "t3", behavior="answer", message="ok", sql=COUNT)
         ),
     )
     answer = engine(client, FakeDb(fail_on="nope")).ask("Combien de ventes ?")

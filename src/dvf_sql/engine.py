@@ -4,6 +4,11 @@ The model explores with run_sql (guarded, read-only, first rows only), then
 ends with submit_answer: one of four behaviors. For "answer", the engine runs
 the submitted SQL itself and returns its rows; if it fails, the error goes back
 to the model, which gets another try within the turn budget.
+
+Grounding: an answer's message is accepted only if the model has SEEN the
+result of its final SQL. A model that submits a query it never ran (and writes
+figures it guessed) gets the result back and must resubmit, so the figures in
+the message come from the rows the API returns.
 """
 
 import datetime as dt
@@ -16,6 +21,7 @@ from zoneinfo import ZoneInfo
 import anthropic
 import psycopg
 
+from dvf_sql import ENGINE_VERSION
 from dvf_sql.db import Database, QueryResult
 from dvf_sql.guard import UnsafeSQLError, check_sql
 from dvf_sql.prompt import build_system_prompt
@@ -42,7 +48,9 @@ TOOLS: list[dict[str, Any]] = [
         "name": "submit_answer",
         "description": (
             "Finish. behavior is answer, clarify, unanswerable or refuse. For "
-            "answer, sql is the final query whose result answers the question."
+            "answer, sql is the final query whose result answers the question: run "
+            "it with run_sql first and base the message on its result. A query you "
+            "have not run yet is run and shown to you, and you submit again."
         ),
         "input_schema": {
             "type": "object",
@@ -87,6 +95,7 @@ class Answer:
     model: str = ""
     latency_s: float = 0.0
     error: str | None = None
+    engine_version: str = ENGINE_VERSION
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -115,6 +124,19 @@ def tool_result(tool_use_id: str, content: Any, is_error: bool = False) -> dict:
         "content": text,
         "is_error": is_error,
     }
+
+
+def normalize_sql(sql: str) -> str:
+    """Same query modulo whitespace and a trailing semicolon."""
+    return " ".join(sql.split()).rstrip(";").strip()
+
+
+@dataclass(slots=True)
+class Trace:
+    """What happened with the database while answering one question."""
+
+    executed: list[str] = field(default_factory=list)  # all SQL sent to the DB
+    seen: dict[str, QueryResult] = field(default_factory=dict)  # results shown
 
 
 def preview(result: QueryResult) -> dict[str, Any]:
@@ -183,14 +205,14 @@ class Engine:
         system = self.system_prompt(today)
         messages: list[dict] = [{"role": "user", "content": question}]
         usage: dict[str, int] = {}
-        executed: list[str] = []
+        trace = Trace()
 
         def fail(turns: int, error: str) -> Answer:
             return Answer(
                 question,
                 "error",
                 error=error,
-                executed_sql=executed,
+                executed_sql=trace.executed,
                 turns=turns,
                 usage=usage,
             )
@@ -213,13 +235,13 @@ class Engine:
             results = []
             for block in tool_uses:
                 if block.name == "submit_answer":
-                    final = self._submit(question, block.input, executed)
+                    final = self._submit(question, block, trace)
                     if isinstance(final, Answer):
                         final.turns, final.usage = turn, usage
                         return final
-                    results.append(tool_result(block.id, final, is_error=True))
+                    results.append(final)
                 elif block.name == "run_sql":
-                    results.append(self._run_sql(block, executed))
+                    results.append(self._run_sql(block, trace))
                 else:
                     results.append(
                         tool_result(block.id, f"unknown tool {block.name}", True)
@@ -227,45 +249,68 @@ class Engine:
             messages.append({"role": "user", "content": results})
         return fail(self.max_turns, f"no submit_answer after {self.max_turns} turns")
 
-    def _execute(self, sql: str, executed: list[str]) -> QueryResult:
+    def _execute(self, sql: str, trace: Trace) -> QueryResult:
         check_sql(sql)  # rejected SQL never reaches the database: not "executed"
-        executed.append(sql)
+        trace.executed.append(sql)
         return self.db.run(sql)
 
-    def _run_sql(self, block: Any, executed: list[str]) -> dict:
+    def _run_sql(self, block: Any, trace: Trace) -> dict:
         sql = (block.input or {}).get("sql") or ""
         try:
-            return tool_result(block.id, preview(self._execute(sql, executed)))
+            result = self._execute(sql, trace)
         except UnsafeSQLError as exc:
             return tool_result(block.id, f"rejected before execution: {exc}", True)
         except psycopg.Error as exc:
             return tool_result(block.id, f"database error: {exc}".strip(), True)
+        trace.seen[normalize_sql(sql)] = result
+        return tool_result(block.id, preview(result))
 
-    def _submit(
-        self, question: str, args: dict[str, Any], executed: list[str]
-    ) -> Answer | str:
-        """An Answer, or an error message for the model to fix and resubmit."""
+    def _submit(self, question: str, block: Any, trace: Trace) -> Answer | dict:
+        """The final Answer, or the tool_result to send back before a resubmit."""
+        args = block.input or {}
         behavior = args.get("behavior")
         if behavior not in BEHAVIORS:
-            return f"behavior must be one of {', '.join(BEHAVIORS)}"
+            return tool_result(
+                block.id, f"behavior must be one of {', '.join(BEHAVIORS)}", True
+            )
         answer = Answer(
             question,
             behavior,
             message=args.get("message") or "",
             assumptions=list(args.get("assumptions") or []),
-            executed_sql=executed,
+            executed_sql=trace.executed,
         )
         if behavior != "answer":
             return answer
         sql = (args.get("sql") or "").strip()
         if not sql:
-            return "behavior answer requires the final sql"
-        try:
-            result = self._execute(sql, executed)
-        except UnsafeSQLError as exc:
-            return f"final sql rejected before execution: {exc}. Fix it and resubmit."
-        except psycopg.Error as exc:
-            return f"final sql failed: {exc}. Fix it and resubmit."
+            return tool_result(block.id, "behavior answer requires the final sql", True)
+
+        result = trace.seen.get(normalize_sql(sql))
+        if result is None:
+            # The model has not seen this result: whatever figures its message
+            # holds were not read from it. Show it, and ask for a resubmit.
+            try:
+                result = self._execute(sql, trace)
+            except UnsafeSQLError as exc:
+                return tool_result(
+                    block.id, f"final sql rejected before execution: {exc}", True
+                )
+            except psycopg.Error as exc:
+                return tool_result(block.id, f"final sql failed: {exc}", True)
+            trace.seen[normalize_sql(sql)] = result
+            return tool_result(
+                block.id,
+                {
+                    "not_accepted_yet": (
+                        "You had not seen the result of this query. Here it is. "
+                        "Check it answers the question, then call submit_answer "
+                        "again: the same sql if it is right (or a corrected one), "
+                        "and a message whose figures come from this result."
+                    ),
+                    "result": preview(result),
+                },
+            )
         answer.sql = sql
         answer.columns, answer.rows = result.columns, result.rows
         answer.truncated = result.truncated

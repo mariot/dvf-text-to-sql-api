@@ -28,6 +28,11 @@ question ─► Claude ──run_sql──► guard ─► read-only Postgres   
   gold SQL.
 - **Tools**: `run_sql` returns the first 50 rows to the model. `submit_answer`
   ends the loop. If the final SQL fails, the error goes back to the model.
+- **Grounded answers**: an answer is accepted only once the model has seen the
+  result of its final SQL. If it submits a query it never ran, the engine
+  runs it, shows the result, and the model must submit again. Otherwise the
+  figures in its message could be guesses that contradict the rows the API
+  returns (seen with a local 14B model: "125 ventes" over a result of 899).
 - **Safety**, three layers on every statement:
   1. `guard.py` (sqlglot): one statement, a query, only `dvf.ventes`, `biens`,
      `lieux`, `zones`, `communes`. No data-modifying CTE, no `SELECT INTO` or
@@ -62,6 +67,20 @@ Options: `--model` (or `DVF_SQL_MODEL`, default `claude-opus-5-5`),
 `--no-thinking` (adaptive thinking is on by default), `--effort
 low|medium|high|xhigh|max`, `--max-turns` (default 10).
 
+## Local models (Ollama)
+
+Any server that speaks the Anthropic Messages API works. For Ollama:
+
+```bash
+brew install ollama && brew services start ollama && ollama pull qwen3:14b
+uv run dvf-sql --base-url http://localhost:11434 --model qwen3:14b ask "..."
+```
+
+On an M1 with 16 GB, qwen3:14b runs at about 6 tokens/s, so a question
+takes minutes. Run evals with `--concurrency 1`, and set
+`OLLAMA_CONTEXT_LENGTH` to at least 12288 so the system prompt and a few
+tool turns fit.
+
 ## Running the eval
 
 ```bash
@@ -74,7 +93,11 @@ uv run $EVAL/score.py runs/baseline.jsonl --report runs/baseline.report.json
   `eval_today`.
 - Runs resume: ids already in the output file are skipped, except errors.
   `--ids sim-01,agg-02` reruns a few questions.
-- Report scores with their eval version, e.g. "N/143 on eval-v1.1, model X".
+- Every prediction records `model` and `engine_version` (`dvf_sql.ENGINE_VERSION`,
+  bumped on any prompt, tool or loop change). The scorer warns when a file
+  mixes them.
+- Report scores with their eval version, e.g. "N/143 on eval-v1.1, model X,
+  engine 0.2".
   The scorer refuses to score if the database no longer reproduces the gold
   snapshot (for example after a new DVF release).
 

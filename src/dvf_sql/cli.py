@@ -3,9 +3,12 @@
     dvf-sql ask "Combien de ventes à Bordeaux en 2024 ?"
     dvf-sql eval ../dvf-text-to-sql-eval/dvf_eval_questions.yaml -o runs/baseline.jsonl
     dvf-sql prompt                      # print the system prompt (with the live schema)
+    dvf-sql --base-url http://localhost:11434 --model qwen3:14b ask "..."   # Ollama
 
 Settings come from the environment: ANTHROPIC_API_KEY, DVF_DSN (default
-postgresql://dvf:dvf@localhost:5433/dvf), DVF_SQL_MODEL (default claude-opus-5-5).
+postgresql://dvf:dvf@localhost:5433/dvf), DVF_SQL_MODEL (default claude-opus-5-5),
+DVF_SQL_BASE_URL (any server speaking the Anthropic Messages API, e.g. Ollama;
+then no Anthropic key is needed).
 """
 
 import argparse
@@ -27,13 +30,23 @@ DEFAULT_DSN = "postgresql://dvf:dvf@localhost:5433/dvf"
 DEFAULT_MODEL = "claude-opus-5-5"
 
 
-def build_engine(args: argparse.Namespace, with_client: bool = True) -> Engine:
-    if with_client and not os.environ.get("ANTHROPIC_API_KEY"):
+def build_client(base_url: str | None) -> anthropic.Anthropic:
+    if base_url:
+        # A local server (Ollama...): it ignores the key, the SDK requires one.
+        # Local models can take many minutes per turn: no 10-minute default.
+        return anthropic.Anthropic(
+            base_url=base_url, api_key="local", max_retries=1, timeout=3600
+        )
+    if not os.environ.get("ANTHROPIC_API_KEY"):
         sys.exit("ANTHROPIC_API_KEY is not set (see .env.example)")
+    return anthropic.Anthropic(max_retries=4)
+
+
+def build_engine(args: argparse.Namespace, with_client: bool = True) -> Engine:
     db = Database(os.environ.get("DVF_DSN", DEFAULT_DSN))
     return Engine(
         db,
-        anthropic.Anthropic(max_retries=4) if with_client else None,
+        build_client(args.base_url) if with_client else None,
         model=args.model,
         max_turns=args.max_turns,
         thinking=not args.no_thinking,
@@ -128,6 +141,11 @@ def main() -> int:
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     ap.add_argument("--model", default=os.environ.get("DVF_SQL_MODEL", DEFAULT_MODEL))
+    ap.add_argument(
+        "--base-url",
+        default=os.environ.get("DVF_SQL_BASE_URL"),
+        help="Anthropic-compatible server, e.g. http://localhost:11434 for Ollama",
+    )
     ap.add_argument("--max-turns", type=int, default=10)
     ap.add_argument("--no-thinking", action="store_true")
     ap.add_argument("--effort", choices=["low", "medium", "high", "xhigh", "max"])
