@@ -10,4 +10,7 @@
 #   0.4  housing and living-environment views (rents, social housing, vacancy,
 #        schools, transport, energy ratings, accessibility, long series, CDC
 #        costs) allowed, with their conventions in the prompt
-ENGINE_VERSION = "0.4"
+#   0.5  commune names resolved with the fuzzy search dvf.chercher_commune
+#        (typos, accents, St/Saint, articles; ambiguous names -> clarify)
+#        instead of an ILIKE example that matched several communes
+ENGINE_VERSION = "0.5"

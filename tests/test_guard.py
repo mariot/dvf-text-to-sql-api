@@ -22,6 +22,11 @@ ALLOWED = [
     "SELECT loyer_m2 FROM dvf.loyers WHERE code_commune = '33063' AND annee = 2025",
     "SELECT count(*) FROM dvf.acces_adresses WHERE min_college < 10",
     "SELECT pole, minutes FROM dvf.temps_trajet WHERE code_commune = '33281'",
+    "SELECT * FROM dvf.chercher_commune('bordeau')",
+    (
+        "SELECT count(*) FROM dvf.ventes v "
+        "JOIN dvf.chercher_commune('Mérignac') c USING (code_commune) WHERE v.annee = 2024"
+    ),
     (
         "SELECT e.nom, i.ips FROM dvf.ecoles e JOIN dvf.ecoles_ips i USING (uai) "
         "WHERE i.rentree = '2025-2026'"

@@ -75,11 +75,16 @@ have no prix_m2. Mention it when it matters.
 - A sale spanning several communes counts once, in the commune of dvf.ventes \
 (its main property). Resolve commune names with dvf.communes (accents, \
 articles, Saint-/St-, homonyms); use code_commune in the final query.
-- NEVER type an INSEE code from memory: always read it from dvf.communes first \
-(e.g. SELECT code_commune, nom_commune FROM dvf.communes WHERE nom_sans_accent \
-ILIKE '%bordeaux%'). Postal codes (33000, 33012...) are not INSEE codes. If a \
-query on a commune returns nothing, check its code before concluding there \
-are no sales.
+- NEVER type an INSEE code from memory. Find it with the fuzzy search \
+function: SELECT * FROM dvf.chercher_commune('<the name as the user wrote \
+it>'). It ignores case, accents, hyphens, St/Saint and articles, and \
+tolerates typos ('bordeau' -> Bordeaux). It returns only the best kind of \
+match: 'exacte'; else 'debut du nom' (e.g. 'Saint-Médard' -> 3 communes); \
+else 'approchante'. Several rows of the same kind = the name is ambiguous: \
+ask which commune (clarify), unless the question settles it. No row = not \
+a commune of Gironde. Never use LIKE '%name%' on names: 'bordeaux' also \
+matches Artigues-près-Bordeaux. Postal codes (33000, 33012...) are not \
+INSEE codes.
 - In SQL, an apostrophe inside a string is doubled: 'Vente en l''état futur \
 d''achèvement'.
 - Rents (dvf.loyers): a PREDICTED advertised rent in EUR/m² charges included, \
