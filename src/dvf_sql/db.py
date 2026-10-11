@@ -94,6 +94,23 @@ class Database:
                 "FROM dvf.biens ORDER BY 1",
                 "dvf.lieux.nom": "SELECT nom FROM dvf.lieux ORDER BY 1",
                 "dvf.zones.zone": "SELECT DISTINCT zone FROM dvf.zones ORDER BY 1",
+                "dvf.loyers.segment": "SELECT DISTINCT segment FROM dvf.loyers ORDER BY 1",
+                "dvf.loyers.annee": "SELECT DISTINCT annee FROM dvf.loyers ORDER BY 1",
+                "dvf.logements_sociaux.annee": "SELECT DISTINCT annee "
+                "FROM dvf.logements_sociaux ORDER BY 1",
+                "dvf.logements_vacants.niveau": "SELECT DISTINCT niveau "
+                "FROM dvf.logements_vacants ORDER BY 1",
+                "dvf.ecoles.type": "SELECT DISTINCT type FROM dvf.ecoles ORDER BY 1",
+                "dvf.ecoles_ips.rentree": "SELECT DISTINCT rentree "
+                "FROM dvf.ecoles_ips ORDER BY 1",
+                "dvf.dpe.type_batiment": "SELECT DISTINCT type_batiment "
+                "FROM dvf.dpe ORDER BY 1",
+                "dvf.dpe.methode": "SELECT DISTINCT methode FROM dvf.dpe ORDER BY 1",
+                "dvf.temps_trajet.pole": "SELECT pole FROM dvf.acces_poles ORDER BY 1",
+                "dvf.series_longues.pays": "SELECT DISTINCT pays "
+                "FROM dvf.series_longues ORDER BY 1",
+                "dvf.series_longues.serie (France)": "SELECT DISTINCT serie "
+                "FROM dvf.series_longues WHERE pays = 'France' ORDER BY 1",
             }
             distinct = {
                 key: [r[0] for r in conn.execute(q).fetchall()]

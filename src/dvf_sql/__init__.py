@@ -7,4 +7,7 @@
 #   0.3  SQL the parser can't tokenize (unbalanced quote) goes back to the model
 #        instead of crashing the question; never guess INSEE codes, read them
 #        from dvf.communes
-ENGINE_VERSION = "0.3"
+#   0.4  housing and living-environment views (rents, social housing, vacancy,
+#        schools, transport, energy ratings, accessibility, long series, CDC
+#        costs) allowed, with their conventions in the prompt
+ENGINE_VERSION = "0.4"

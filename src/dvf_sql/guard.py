@@ -10,7 +10,11 @@ The rules:
   * no data-modifying or locking clause anywhere (data-modifying CTEs,
     SELECT INTO, FOR UPDATE, COPY...);
   * tables: only the semantic layer (dvf.ventes, biens, lieux, zones,
-    communes) and the query's own CTEs. No raw table, no system catalog;
+    communes, and the housing / living-environment views: loyers,
+    logements_sociaux, logements_vacants, series_longues, cout_logement_social,
+    ecoles, ecoles_ips, colleges_ivac, arrets_transport, dpe, acces_adresses,
+    temps_trajet)
+    and the query's own CTEs. No raw table, no system catalog;
   * functions: no server, file, session or sleep functions (pg_*, lo_*,
     dblink, set_config, version(), inet_server_addr()...).
 """
@@ -20,7 +24,23 @@ from sqlglot import exp
 from sqlglot.errors import ParseError, TokenError
 
 ALLOWED_SCHEMA = "dvf"
-ALLOWED_TABLES = frozenset({"ventes", "biens", "lieux", "zones", "communes"})
+ALLOWED_TABLES = frozenset(
+    {"ventes", "biens", "lieux", "zones", "communes"}
+    | {
+        "loyers",
+        "logements_sociaux",
+        "logements_vacants",
+        "series_longues",
+        "cout_logement_social",
+        "ecoles",
+        "ecoles_ips",
+        "colleges_ivac",
+        "arrets_transport",
+        "dpe",
+        "acces_adresses",
+        "temps_trajet",
+    }
+)
 
 FORBIDDEN_NODES: tuple[type[exp.Expression], ...] = (
     exp.Insert,

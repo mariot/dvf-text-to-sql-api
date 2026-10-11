@@ -19,6 +19,13 @@ ALLOWED = [
     "SELECT 1 UNION ALL SELECT 2",
     "SELECT v.code_commune FROM dvf.ventes v JOIN dvf.zones z USING (code_commune)",
     "SELECT * FROM dvf.communes WHERE nom_commune ILIKE 'saint-m%'",
+    "SELECT loyer_m2 FROM dvf.loyers WHERE code_commune = '33063' AND annee = 2025",
+    "SELECT count(*) FROM dvf.acces_adresses WHERE min_college < 10",
+    "SELECT pole, minutes FROM dvf.temps_trajet WHERE code_commune = '33281'",
+    (
+        "SELECT e.nom, i.ips FROM dvf.ecoles e JOIN dvf.ecoles_ips i USING (uai) "
+        "WHERE i.rentree = '2025-2026'"
+    ),
 ]
 
 REJECTED = [
@@ -42,6 +49,8 @@ REJECTED = [
     ("SELECT * FROM information_schema.tables", "information_schema"),
     ("SELECT * FROM dvf.mutations", "dvf.mutations"),
     ("SELECT * FROM dvf.load_log", "load_log"),
+    ("SELECT * FROM dvf.ref_loyers", "ref_loyers"),  # raw tables behind the views
+    ("SELECT * FROM dvf.osm_pieton", "osm_pieton"),
     ("SELECT * FROM public.ventes", "public.ventes"),
     ("SELEC nonsense", "only queries|could not parse"),
     # qwen3:14b wrote this: the second apostrophe is escaped, the first is not.
