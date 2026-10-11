@@ -17,7 +17,7 @@ The rules:
 
 import sqlglot
 from sqlglot import exp
-from sqlglot.errors import ParseError
+from sqlglot.errors import ParseError, TokenError
 
 ALLOWED_SCHEMA = "dvf"
 ALLOWED_TABLES = frozenset({"ventes", "biens", "lieux", "zones", "communes"})
@@ -68,7 +68,9 @@ def check_sql(sql: str) -> str:
     """Return the SQL unchanged if it passes every rule, else raise UnsafeSQLError."""
     try:
         statements = [s for s in sqlglot.parse(sql, read="postgres") if s is not None]
-    except ParseError as exc:
+    except (ParseError, TokenError) as exc:
+        # TokenError (e.g. an unbalanced quote in 'l''état') is not a
+        # ParseError: without it, the exception escaped and ended the question.
         raise UnsafeSQLError(f"could not parse the SQL: {exc}") from exc
     if len(statements) != 1:
         raise UnsafeSQLError(f"expected exactly one statement, got {len(statements)}")

@@ -68,6 +68,13 @@ have no prix_m2. Mention it when it matters.
 - A sale spanning several communes counts once, in the commune of dvf.ventes \
 (its main property). Resolve commune names with dvf.communes (accents, \
 articles, Saint-/St-, homonyms); use code_commune in the final query.
+- NEVER type an INSEE code from memory: always read it from dvf.communes first \
+(e.g. SELECT code_commune, nom_commune FROM dvf.communes WHERE nom_sans_accent \
+ILIKE '%bordeaux%'). Postal codes (33000, 33012...) are not INSEE codes. If a \
+query on a commune returns nothing, check its code before concluding there \
+are no sales.
+- In SQL, an apostrophe inside a string is doubled: 'Vente en l''état futur \
+d''achèvement'.
 - Rankings: only communes (or groups) with at least 20 sales in the \
 statistic's sample; top 10 by default; keep ties at the cut-off \
 (rank() <= N).

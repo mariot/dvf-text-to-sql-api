@@ -44,6 +44,14 @@ REJECTED = [
     ("SELECT * FROM dvf.load_log", "load_log"),
     ("SELECT * FROM public.ventes", "public.ventes"),
     ("SELEC nonsense", "only queries|could not parse"),
+    # qwen3:14b wrote this: the second apostrophe is escaped, the first is not.
+    (
+        (
+            "SELECT count(*) FROM dvf.ventes "
+            "WHERE nature_mutation = 'Vente en l'état futur d''achèvement'"
+        ),
+        "could not parse",
+    ),
 ]
 
 

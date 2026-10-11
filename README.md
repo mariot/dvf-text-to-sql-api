@@ -96,8 +96,8 @@ uv run $EVAL/score.py runs/baseline.jsonl --report runs/baseline.report.json
 - Every prediction records `model` and `engine_version` (`dvf_sql.ENGINE_VERSION`,
   bumped on any prompt, tool or loop change). The scorer warns when a file
   mixes them.
-- Report scores with their eval version, e.g. "N/143 on eval-v1.1, model X,
-  engine 0.2".
+- Report scores with their eval version, e.g. "N/143 on eval-v1.2, model X,
+  engine 0.3".
   The scorer refuses to score if the database no longer reproduces the gold
   snapshot (for example after a new DVF release).
 
