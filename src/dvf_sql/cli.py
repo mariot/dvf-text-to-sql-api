@@ -17,6 +17,7 @@ import json
 import os
 import sys
 import threading
+import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -102,7 +103,14 @@ def cmd_eval(args: argparse.Namespace) -> int:
 
     def one(q: dict) -> Answer:
         # Only the question text reaches the engine: never notes, gold or category.
-        return engine.ask(q["question"], today)
+        try:
+            return engine.ask(q["question"], today)
+        except Exception as exc:  # noqa: BLE001
+            # An uncaught exception would surface only after the pool has run
+            # every remaining question, and nothing would be written. Record it
+            # as an error instead: the next run retries it.
+            print(f"{q['id']}: {traceback.format_exc()}", file=sys.stderr)
+            return Answer(q["question"], "error", error=f"{type(exc).__name__}: {exc}")
 
     errors = 0
     with (
