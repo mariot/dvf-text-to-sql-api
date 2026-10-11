@@ -110,7 +110,12 @@ def cmd_eval(args: argparse.Namespace) -> int:
             # every remaining question, and nothing would be written. Record it
             # as an error instead: the next run retries it.
             print(f"{q['id']}: {traceback.format_exc()}", file=sys.stderr)
-            return Answer(q["question"], "error", error=f"{type(exc).__name__}: {exc}")
+            return Answer(
+                q["question"],
+                "error",
+                error=f"{type(exc).__name__}: {exc}",
+                model=args.model,
+            )
 
     errors = 0
     with (

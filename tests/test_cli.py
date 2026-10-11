@@ -60,6 +60,7 @@ def test_crash_is_recorded_as_error_and_the_run_goes_on(
     assert by_id["q-ok"]["behavior"] == "answer"
     assert by_id["q-crash"]["behavior"] == "error"
     assert by_id["q-crash"]["error"].startswith("AttributeError")
+    assert by_id["q-crash"]["model"] == "test-model"  # same system as the others
     assert "Traceback" in capsys.readouterr().err  # the cause stays diagnosable
 
 
