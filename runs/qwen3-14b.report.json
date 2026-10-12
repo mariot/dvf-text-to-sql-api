@@ -1,7 +1,7 @@
 {
- "eval_version": "1.1",
+ "eval_version": "1.5",
  "dvf_release": "2026-04",
- "predictions": "runs/qwen3-14b.jsonl",
+ "predictions": "../dvf-text-to-sql-api/runs/qwen3-14b.jsonl",
  "items": [
   {
    "id": "sim-01",
@@ -486,10 +486,10 @@
    "category": "ranking",
    "expected": "answer",
    "predicted": "answer",
-   "pass": false,
-   "verdict": "wrong",
-   "reason": "values differ (gold [['Bordeaux', 5433], ['Mérignac', 1283]], predicted [['Bordeaux', 5433], ['Saint-Médard-en-Jalles', 5433]])",
-   "relaxed": false
+   "pass": true,
+   "verdict": "strict",
+   "reason": "",
+   "relaxed": true
   },
   {
    "id": "rnk-02",
@@ -666,7 +666,7 @@
    "predicted": "answer",
    "pass": false,
    "verdict": "wrong",
-   "reason": "values differ (gold [['2021-520022', '2021-11-24', 193200.0, 15, 12880.0, 951.0], ['2024-364424', '2024-01-26', 1785000.0, 160, 11156.25, 284.0]], predicted [['2021-520022', '2021-11-24', 12880.0, None, '01010000206A0800007474221EDD7019411B37D14ABC7F5841'], ['2024-364424', '2024-01-26', 11156.25, 150.22, '01010000206A080000789F4AEF33821941D93BB722E27F5841']])",
+   "reason": "values differ (gold [['2021-520022', '2021-11-24', 193200.0, 15, 12880.0, 951.0], ['2024-364424', '2024-01-26', 1785000.0, 160, 11156.0, 284.0]], predicted [['2021-520022', '2021-11-24', 12880.0, None, '01010000206A0800007474221EDD7019411B37D14ABC7F5841'], ['2024-364424', '2024-01-26', 11156.25, 150.22, '01010000206A080000789F4AEF33821941D93BB722E27F5841']])",
    "relaxed": false
   },
   {
@@ -716,7 +716,7 @@
    "predicted": "answer",
    "pass": false,
    "verdict": "wrong",
-   "reason": "16 rows, gold has 14",
+   "reason": "15 rows, gold has 14",
    "relaxed": false
   },
   {
@@ -776,7 +776,7 @@
    "predicted": "answer",
    "pass": false,
    "verdict": "wrong",
-   "reason": "25 rows, gold has 12",
+   "reason": "24 rows, gold has 12",
    "relaxed": false
   },
   {
@@ -796,7 +796,7 @@
    "predicted": "answer",
    "pass": false,
    "verdict": "wrong",
-   "reason": "59 rows, gold has 28",
+   "reason": "55 rows, gold has 28",
    "relaxed": false
   },
   {
@@ -825,7 +825,7 @@
    "predicted": "answer",
    "pass": false,
    "verdict": "wrong",
-   "reason": "values differ (gold [['2024-371375', 'Le Bouscat', 1700000.0, 110, 15454.55, 5115.0], ['2024-377210', 'La Teste-de-Buch', 5569508.0, 230, 24215.25, 5435.0]], predicted [[2024, '2024-371375', '2024-08-27', 'Vente', 1700000.0, '33069', 'Le Bouscat', '33110', 25, 'RUE ERNEST ROYER', 'Maison', 1, 1, 0, 0, 0, 2, 2, True, 110, 5, None, 110, 759, True, True, 15454.55, -0.600458, 44.855381, '01010000206A080000FB36FF42915E1941F973CF1848815841'], [2024, '2024-377210', '2024-01-10', 'Vente', 5569508.0, '33529', 'La Teste-de-Buch', '33115', 128, 'BD DE L OCEAN PYLA', 'Maison', 2, 1, 0, 1, 0, 5, 3, True, 230, 8, None, 230, 1798, True, True, 24215.25, -1.202787, 44.625603, '01010000206A0800006F04AF2CBC621641AF69491CB06A5841']])",
+   "reason": "values differ (gold [['2024-371375', 'Le Bouscat', 1700000.0, 110, 15455.0, 5115.0], ['2024-377210', 'La Teste-de-Buch', 5569508.0, 230, 24215.0, 5435.0]], predicted [[2024, '2024-371375', '2024-08-27', 'Vente', 1700000.0, '33069', 'Le Bouscat', '33110', 25, 'RUE ERNEST ROYER', 'Maison', 1, 1, 0, 0, 0, 2, 2, True, 110, 5, None, 110, 759, True, True, 15454.55, -0.600458, 44.855381, '01010000206A080000FB36FF42915E1941F973CF1848815841'], [2024, '2024-377210', '2024-01-10', 'Vente', 5569508.0, '33529', 'La Teste-de-Buch', '33115', 128, 'BD DE L OCEAN PYLA', 'Maison', 2, 1, 0, 1, 0, 5, 3, True, 230, 8, None, 230, 1798, True, True, 24215.25, -1.202787, 44.625603, '01010000206A0800006F04AF2CBC621641AF69491CB06A5841']])",
    "relaxed": false
   },
   {
@@ -1001,7 +1001,7 @@
    "predicted": "answer",
    "pass": false,
    "verdict": "wrong",
-   "reason": "values differ (gold [['Bordeaux', 5433], ['Mérignac', 1283]], predicted [['Bordeaux', 5447], ['Saint-Médard-en-Jalles', 5447]])",
+   "reason": "values differ (gold [['Bordeaux', 5433], ['Mérignac', 1283]], predicted [['Bordeaux', 5447], ['Mérignac', 1287]])",
    "relaxed": false
   },
   {
@@ -1145,12 +1145,12 @@
   },
   {
    "id": "una-01",
-   "category": "unanswerable",
-   "expected": "unanswerable",
+   "category": "aggregation",
+   "expected": "answer",
    "predicted": "unanswerable",
-   "pass": true,
-   "verdict": "pass",
-   "reason": ""
+   "pass": false,
+   "verdict": "wrong_behavior",
+   "reason": "unanswerable instead of answer"
   },
   {
    "id": "una-02",
@@ -1181,12 +1181,12 @@
   },
   {
    "id": "una-05",
-   "category": "unanswerable",
-   "expected": "unanswerable",
+   "category": "aggregation",
+   "expected": "answer",
    "predicted": "unanswerable",
-   "pass": true,
-   "verdict": "pass",
-   "reason": ""
+   "pass": false,
+   "verdict": "wrong_behavior",
+   "reason": "unanswerable instead of answer"
   },
   {
    "id": "una-06",
@@ -1376,6 +1376,150 @@
    "pass": false,
    "verdict": "wrong_behavior",
    "reason": "answer instead of refuse"
+  },
+  {
+   "id": "fam-01",
+   "category": "multi_step",
+   "expected": "answer",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
+  },
+  {
+   "id": "fam-02",
+   "category": "spatial",
+   "expected": "answer",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
+  },
+  {
+   "id": "fam-03",
+   "category": "aggregation",
+   "expected": "answer",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
+  },
+  {
+   "id": "tra-01",
+   "category": "multi_step",
+   "expected": "answer",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
+  },
+  {
+   "id": "tra-02",
+   "category": "ranking",
+   "expected": "answer",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
+  },
+  {
+   "id": "tra-03",
+   "category": "spatial",
+   "expected": "answer",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
+  },
+  {
+   "id": "bud-01",
+   "category": "aggregation",
+   "expected": "answer",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
+  },
+  {
+   "id": "bud-02",
+   "category": "aggregation",
+   "expected": "answer",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
+  },
+  {
+   "id": "bud-03",
+   "category": "multi_step",
+   "expected": "answer",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
+  },
+  {
+   "id": "nrj-01",
+   "category": "ranking",
+   "expected": "answer",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
+  },
+  {
+   "id": "nrj-02",
+   "category": "aggregation",
+   "expected": "answer",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
+  },
+  {
+   "id": "inv-01",
+   "category": "aggregation",
+   "expected": "answer",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
+  },
+  {
+   "id": "his-01",
+   "category": "temporal",
+   "expected": "answer",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
+  },
+  {
+   "id": "una-12",
+   "category": "unanswerable",
+   "expected": "unanswerable",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
+  },
+  {
+   "id": "una-13",
+   "category": "unanswerable",
+   "expected": "unanswerable",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
+  },
+  {
+   "id": "amb-12",
+   "category": "ambiguous",
+   "expected": "clarify",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
   }
  ]
 }

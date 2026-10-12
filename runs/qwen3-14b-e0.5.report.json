@@ -1,5 +1,5 @@
 {
- "eval_version": "1.4",
+ "eval_version": "1.5",
  "dvf_release": "2026-04",
  "predictions": "../dvf-text-to-sql-api/runs/qwen3-14b-e0.5.jsonl",
  "items": [
@@ -484,10 +484,10 @@
    "category": "ranking",
    "expected": "answer",
    "predicted": "answer",
-   "pass": false,
-   "verdict": "wrong",
-   "reason": "values differ (gold [['Bordeaux', 5433], ['Mérignac', 1283]], predicted [['Bordeaux', 5433], ['Mérignac', 1283]])",
-   "relaxed": false
+   "pass": true,
+   "verdict": "strict",
+   "reason": "",
+   "relaxed": true
   },
   {
    "id": "rnk-02",
@@ -514,10 +514,10 @@
    "category": "ranking",
    "expected": "answer",
    "predicted": "answer",
-   "pass": false,
-   "verdict": "wrong",
-   "reason": "values differ (gold [['AV THIERS', 31], ['CRS DU MEDOC', 30]], predicted [['AV THIERS', 31], ['CRS DU MEDOC', 30]])",
-   "relaxed": false
+   "pass": true,
+   "verdict": "strict",
+   "reason": "",
+   "relaxed": true
   },
   {
    "id": "rnk-05",

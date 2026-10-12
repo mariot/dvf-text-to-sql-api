@@ -1,5 +1,5 @@
 {
- "eval_version": "1.3",
+ "eval_version": "1.5",
  "dvf_release": "2026-04",
  "predictions": "../dvf-text-to-sql-api/runs/qwen3-14b-e0.4.jsonl",
  "items": [
@@ -768,7 +768,7 @@
    "predicted": "answer",
    "pass": false,
    "verdict": "wrong",
-   "reason": "values differ (gold [[227, 52000.0, 736.0]], predicted [[7985.0, 507]])",
+   "reason": "values differ (gold [[227, 52000.0, 736.0]], predicted [[7400.0, 507]])",
    "relaxed": false
   },
   {
@@ -1184,12 +1184,13 @@
   },
   {
    "id": "una-05",
-   "category": "unanswerable",
-   "expected": "unanswerable",
+   "category": "aggregation",
+   "expected": "answer",
    "predicted": "answer",
    "pass": false,
-   "verdict": "wrong_behavior",
-   "reason": "answer instead of unanswerable"
+   "verdict": "wrong",
+   "reason": "values differ (gold [['D', 4526]], predicted [[3.65377817057004]])",
+   "relaxed": false
   },
   {
    "id": "una-06",

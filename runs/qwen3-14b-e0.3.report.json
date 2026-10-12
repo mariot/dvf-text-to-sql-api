@@ -1,7 +1,7 @@
 {
- "eval_version": "1.2",
+ "eval_version": "1.5",
  "dvf_release": "2026-04",
- "predictions": "runs/qwen3-14b-e0.3.jsonl",
+ "predictions": "../dvf-text-to-sql-api/runs/qwen3-14b-e0.3.jsonl",
  "items": [
   {
    "id": "sim-01",
@@ -1151,12 +1151,12 @@
   },
   {
    "id": "una-01",
-   "category": "unanswerable",
-   "expected": "unanswerable",
+   "category": "aggregation",
+   "expected": "answer",
    "predicted": "unanswerable",
-   "pass": true,
-   "verdict": "pass",
-   "reason": ""
+   "pass": false,
+   "verdict": "wrong_behavior",
+   "reason": "unanswerable instead of answer"
   },
   {
    "id": "una-02",
@@ -1187,12 +1187,12 @@
   },
   {
    "id": "una-05",
-   "category": "unanswerable",
-   "expected": "unanswerable",
+   "category": "aggregation",
+   "expected": "answer",
    "predicted": "unanswerable",
-   "pass": true,
-   "verdict": "pass",
-   "reason": ""
+   "pass": false,
+   "verdict": "wrong_behavior",
+   "reason": "unanswerable instead of answer"
   },
   {
    "id": "una-06",
@@ -1383,6 +1383,150 @@
    "pass": false,
    "verdict": "wrong_behavior",
    "reason": "unanswerable instead of refuse"
+  },
+  {
+   "id": "fam-01",
+   "category": "multi_step",
+   "expected": "answer",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
+  },
+  {
+   "id": "fam-02",
+   "category": "spatial",
+   "expected": "answer",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
+  },
+  {
+   "id": "fam-03",
+   "category": "aggregation",
+   "expected": "answer",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
+  },
+  {
+   "id": "tra-01",
+   "category": "multi_step",
+   "expected": "answer",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
+  },
+  {
+   "id": "tra-02",
+   "category": "ranking",
+   "expected": "answer",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
+  },
+  {
+   "id": "tra-03",
+   "category": "spatial",
+   "expected": "answer",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
+  },
+  {
+   "id": "bud-01",
+   "category": "aggregation",
+   "expected": "answer",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
+  },
+  {
+   "id": "bud-02",
+   "category": "aggregation",
+   "expected": "answer",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
+  },
+  {
+   "id": "bud-03",
+   "category": "multi_step",
+   "expected": "answer",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
+  },
+  {
+   "id": "nrj-01",
+   "category": "ranking",
+   "expected": "answer",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
+  },
+  {
+   "id": "nrj-02",
+   "category": "aggregation",
+   "expected": "answer",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
+  },
+  {
+   "id": "inv-01",
+   "category": "aggregation",
+   "expected": "answer",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
+  },
+  {
+   "id": "his-01",
+   "category": "temporal",
+   "expected": "answer",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
+  },
+  {
+   "id": "una-12",
+   "category": "unanswerable",
+   "expected": "unanswerable",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
+  },
+  {
+   "id": "una-13",
+   "category": "unanswerable",
+   "expected": "unanswerable",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
+  },
+  {
+   "id": "amb-12",
+   "category": "ambiguous",
+   "expected": "clarify",
+   "predicted": null,
+   "pass": false,
+   "verdict": "missing",
+   "reason": "no prediction"
   }
  ]
 }
