@@ -13,4 +13,8 @@
 #   0.5  commune names resolved with the fuzzy search dvf.chercher_commune
 #        (typos, accents, St/Saint, articles; ambiguous names -> clarify)
 #        instead of an ILIKE example that matched several communes
-ENGINE_VERSION = "0.5"
+#   0.6  a commune code the model has not seen (in a result or the question)
+#        is rejected before execution, with a pointer to dvf.chercher_commune
+#        submit_answer arguments written as a JSON text (not a tool call) are
+#        accepted, with the same checks; the nudge asks for a tool call
+ENGINE_VERSION = "0.6"

@@ -1,6 +1,6 @@
 import pytest
 
-from dvf_sql.guard import UnsafeSQLError, check_sql
+from dvf_sql.guard import UnsafeSQLError, check_sql, commune_codes
 
 ALLOWED = [
     "SELECT count(*) FROM dvf.ventes WHERE annee = 2024 AND est_vente",
@@ -85,3 +85,36 @@ def test_cte_name_cannot_shadow_a_schema_table() -> None:
     check_sql("WITH mutations AS (SELECT 1 AS a) SELECT a FROM mutations")
     with pytest.raises(UnsafeSQLError):
         check_sql("WITH mutations AS (SELECT 1 AS a) SELECT * FROM dvf.mutations")
+
+
+@pytest.mark.parametrize(
+    ("sql", "codes"),
+    [
+        ("SELECT * FROM dvf.ventes WHERE code_commune = '33063'", {"33063"}),
+        ("SELECT 1 FROM dvf.ventes v WHERE '33063' = v.code_commune", {"33063"}),
+        (
+            "SELECT 1 FROM dvf.ventes WHERE code_commune IN ('33063', '33281')",
+            {"33063", "33281"},
+        ),
+        (
+            "SELECT 1 FROM dvf.ventes WHERE code_commune = ANY(ARRAY['33049'])",
+            {"33049"},
+        ),
+        ("SELECT 1 FROM dvf.ventes WHERE code_commune LIKE '33063'", {"33063"}),
+        # Postal codes, years, names and subqueries on other columns: no.
+        ("SELECT 1 FROM dvf.ventes WHERE code_postal = '33000'", set()),
+        ("SELECT 1 FROM dvf.ventes WHERE annee = 2024", set()),
+        ("SELECT 1 FROM dvf.communes WHERE nom_commune = 'Bordeaux'", set()),
+        (
+            (
+                "SELECT 1 FROM dvf.ventes WHERE code_commune IN "
+                "(SELECT code_commune FROM dvf.ventes WHERE code_postal = '33000')"
+            ),
+            set(),
+        ),
+        ("SELECT * FROM dvf.chercher_commune('Bordeaux')", set()),
+        ("SELEC nonsense '33063'", set()),
+    ],
+)
+def test_commune_codes(sql: str, codes: set[str]) -> None:
+    assert commune_codes(sql) == codes

@@ -9,12 +9,24 @@ Grounding: an answer's message is accepted only if the model has SEEN the
 result of its final SQL. A model that submits a query it never ran (and writes
 figures it guessed) gets the result back and must resubmit, so the figures in
 the message come from the rows the API returns.
+
+Commune codes: a query that compares a commune column with a code the model
+has not seen (in an earlier result or in the question) is rejected before
+execution, with a pointer to dvf.chercher_commune. Prompting alone did not
+stop a 14B model from typing codes from memory (33012, 33049 for Bordeaux).
+
+Answers written as text: some local models (qwen3:30b-a3b on Ollama) write
+the submit_answer arguments as a JSON text instead of a tool call, again and
+again until the turn budget runs out. A text reply holding a valid
+submit_answer object goes through exactly the same checks as the tool call.
 """
 
 import datetime as dt
 import json
+import re
 import time
 from dataclasses import asdict, dataclass, field
+from types import SimpleNamespace
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -23,12 +35,17 @@ import psycopg
 
 from dvf_sql import ENGINE_VERSION
 from dvf_sql.db import Database, QueryResult
-from dvf_sql.guard import UnsafeSQLError, check_sql
+from dvf_sql.guard import COMMUNE_CODE, UnsafeSQLError, check_sql, commune_codes
 from dvf_sql.prompt import build_system_prompt
 
 BEHAVIORS = ("answer", "clarify", "unanswerable", "refuse")
 PREVIEW_ROWS = 50  # rows of a run_sql result shown to the model
 PARIS = ZoneInfo("Europe/Paris")
+NUDGE = (
+    "Finish by calling the submit_answer tool (a tool call, not a JSON text "
+    "in your reply)."
+)
+CODE_IN_TEXT = re.compile(r"\b(?:\d{5}|2[AB]\d{3})\b")
 
 TOOLS: list[dict[str, Any]] = [
     {
@@ -95,6 +112,7 @@ class Answer:
     model: str = ""
     latency_s: float = 0.0
     error: str | None = None
+    submitted_as_text: bool = False  # submit_answer arguments written as text
     engine_version: str = ENGINE_VERSION
 
     def to_dict(self) -> dict[str, Any]:
@@ -126,6 +144,21 @@ def tool_result(tool_use_id: str, content: Any, is_error: bool = False) -> dict:
     }
 
 
+def text_submission(content: list[Any]) -> dict[str, Any] | None:
+    """submit_answer arguments written as a JSON text, if a reply holds them."""
+    text = "\n".join(b.text for b in content if b.type == "text")
+    start, end = text.find("{"), text.rfind("}")
+    if start < 0 or end < start:
+        return None
+    try:
+        args = json.loads(text[start : end + 1])
+    except json.JSONDecodeError:
+        return None
+    if isinstance(args, dict) and args.get("behavior") in BEHAVIORS:
+        return args
+    return None
+
+
 def normalize_sql(sql: str) -> str:
     """Same query modulo whitespace and a trailing semicolon."""
     return " ".join(sql.split()).rstrip(";").strip()
@@ -137,6 +170,14 @@ class Trace:
 
     executed: list[str] = field(default_factory=list)  # all SQL sent to the DB
     seen: dict[str, QueryResult] = field(default_factory=dict)  # results shown
+    # Commune codes the model may use: shown in a result, or in the question.
+    known_codes: set[str] = field(default_factory=set)
+
+    def remember_codes(self, shown: dict[str, Any]) -> None:
+        for row in shown["rows"]:
+            for value in row:
+                if isinstance(value, str) and COMMUNE_CODE.match(value):
+                    self.known_codes.add(value)
 
 
 def preview(result: QueryResult) -> dict[str, Any]:
@@ -205,7 +246,7 @@ class Engine:
         system = self.system_prompt(today)
         messages: list[dict] = [{"role": "user", "content": question}]
         usage: dict[str, int] = {}
-        trace = Trace()
+        trace = Trace(known_codes=set(CODE_IN_TEXT.findall(question)))
 
         def fail(turns: int, error: str) -> Answer:
             return Answer(
@@ -227,8 +268,19 @@ class Engine:
 
             tool_uses = [b for b in response.content if b.type == "tool_use"]
             if not tool_uses:
+                args = text_submission(response.content)
+                if args is None:
+                    messages.append({"role": "user", "content": NUDGE})
+                    continue
+                block = SimpleNamespace(id=None, name="submit_answer", input=args)
+                final = self._submit(question, block, trace)
+                if isinstance(final, Answer):
+                    final.turns, final.usage = turn, usage
+                    final.submitted_as_text = True
+                    return final
+                # No tool call to answer: the feedback goes back as plain text.
                 messages.append(
-                    {"role": "user", "content": "Finish by calling submit_answer."}
+                    {"role": "user", "content": f"{final['content']}\n\n{NUDGE}"}
                 )
                 continue
 
@@ -251,6 +303,14 @@ class Engine:
 
     def _execute(self, sql: str, trace: Trace) -> QueryResult:
         check_sql(sql)  # rejected SQL never reaches the database: not "executed"
+        unknown = commune_codes(sql) - trace.known_codes
+        if unknown:
+            raise UnsafeSQLError(
+                f"commune code(s) {', '.join(sorted(unknown))} not looked up. "
+                "Never type an INSEE code from memory: run SELECT * FROM "
+                "dvf.chercher_commune('<the name as the user wrote it>') and use "
+                "the code_commune it returns (postal codes are not INSEE codes)"
+            )
         trace.executed.append(sql)
         return self.db.run(sql)
 
@@ -263,7 +323,9 @@ class Engine:
         except psycopg.Error as exc:
             return tool_result(block.id, f"database error: {exc}".strip(), True)
         trace.seen[normalize_sql(sql)] = result
-        return tool_result(block.id, preview(result))
+        shown = preview(result)
+        trace.remember_codes(shown)
+        return tool_result(block.id, shown)
 
     def _submit(self, question: str, block: Any, trace: Trace) -> Answer | dict:
         """The final Answer, or the tool_result to send back before a resubmit."""
@@ -299,6 +361,8 @@ class Engine:
             except psycopg.Error as exc:
                 return tool_result(block.id, f"final sql failed: {exc}", True)
             trace.seen[normalize_sql(sql)] = result
+            shown = preview(result)
+            trace.remember_codes(shown)
             return tool_result(
                 block.id,
                 {
@@ -308,7 +372,7 @@ class Engine:
                         "again: the same sql if it is right (or a corrected one), "
                         "and a message whose figures come from this result."
                     ),
-                    "result": preview(result),
+                    "result": shown,
                 },
             )
         answer.sql = sql

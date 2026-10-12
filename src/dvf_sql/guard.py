@@ -17,7 +17,12 @@ The rules:
     and the query's own CTEs. No raw table, no system catalog;
   * functions: no server, file, session or sleep functions (pg_*, lo_*,
     dblink, set_config, version(), inet_server_addr()...).
+
+commune_codes() is not a safety rule: it lists the commune codes a query
+filters on, so the engine can reject codes the model typed from memory.
 """
+
+import re
 
 import sqlglot
 from sqlglot import exp
@@ -74,6 +79,18 @@ FORBIDDEN_FUNCTIONS = frozenset(
 FORBIDDEN_TYPED_FUNCTIONS: tuple[type[exp.Expression], ...] = (exp.CurrentVersion,)
 
 
+COMMUNE_CODE = re.compile(r"^(?:\d{5}|2[AB]\d{3})$")
+# Predicates whose operands are compared with each other: a literal inside one
+# of them is a commune code if the other side is a commune column.
+COMPARISONS: tuple[type[exp.Expression], ...] = (
+    exp.EQ,
+    exp.NEQ,
+    exp.In,
+    exp.Like,
+    exp.ILike,
+)
+
+
 class UnsafeSQLError(ValueError):
     """The SQL was rejected before execution. The message is safe to show."""
 
@@ -127,3 +144,28 @@ def check_table(table: exp.Table, cte_names: set[str]) -> None:
         return
     allowed = ", ".join(f"{ALLOWED_SCHEMA}.{t}" for t in sorted(ALLOWED_TABLES))
     raise UnsafeSQLError(f"table {table.sql()} is not allowed (use only {allowed})")
+
+
+def commune_codes(sql: str) -> set[str]:
+    """Code-shaped string literals compared with a commune column.
+
+    "code_commune = '33063'", "c.code_commune IN ('33063', '33281')": yes.
+    "code_postal = '33000'", "annee = 2024": no. SQL that does not parse
+    yields nothing (check_sql rejects it anyway).
+    """
+    try:
+        statements = [s for s in sqlglot.parse(sql, read="postgres") if s is not None]
+    except ParseError, TokenError:
+        return set()
+    codes = set()
+    for tree in statements:
+        for literal in tree.find_all(exp.Literal):
+            if not literal.is_string or not COMMUNE_CODE.match(literal.this):
+                continue
+            comparison = literal.find_ancestor(*COMPARISONS)
+            if comparison and any(
+                "commune" in column.name.lower()
+                for column in comparison.find_all(exp.Column)
+            ):
+                codes.add(literal.this)
+    return codes

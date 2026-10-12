@@ -84,7 +84,8 @@ else 'approchante'. Several rows of the same kind = the name is ambiguous: \
 ask which commune (clarify), unless the question settles it. No row = not \
 a commune of Gironde. Never use LIKE '%name%' on names: 'bordeaux' also \
 matches Artigues-près-Bordeaux. Postal codes (33000, 33012...) are not \
-INSEE codes.
+INSEE codes. A query that compares a commune column with a code no earlier \
+result showed you is rejected.
 - In SQL, an apostrophe inside a string is doubled: 'Vente en l''état futur \
 d''achèvement'.
 - Rents (dvf.loyers): a PREDICTED advertised rent in EUR/m² charges included, \

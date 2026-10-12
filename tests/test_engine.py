@@ -1,13 +1,14 @@
 """The engine loop, with a scripted fake Claude and a fake database."""
 
 import datetime as dt
+import json
 from types import SimpleNamespace
 from typing import Any
 
 import psycopg
 
 from dvf_sql.db import QueryResult
-from dvf_sql.engine import Engine
+from dvf_sql.engine import NUDGE, Engine
 
 
 def tool_use(name: str, block_id: str = "t1", **args: Any) -> SimpleNamespace:
@@ -48,6 +49,10 @@ class FakeDb:
         self.ran.append(sql)
         if self.fail_on and self.fail_on in sql:
             raise psycopg.errors.UndefinedColumn('column "nope" does not exist')
+        if "chercher_commune" in sql:
+            return QueryResult(
+                ["code_commune", "nom_commune"], [["33063", "Bordeaux"]], False, 0.01
+            )
         return QueryResult(["n"], [[29200]], truncated=False, seconds=0.01)
 
 
@@ -152,6 +157,60 @@ def test_whitespace_and_semicolon_do_not_count_as_a_new_query() -> None:
     assert answer.turns == 2
 
 
+LOOKUP = "SELECT * FROM dvf.chercher_commune('Bordeaux')"
+BORDEAUX = "SELECT count(*) AS n FROM dvf.ventes WHERE code_commune = '33063'"
+
+
+def test_commune_code_typed_from_memory_is_rejected_until_looked_up() -> None:
+    client = FakeClient(
+        reply(tool_use("run_sql", sql=BORDEAUX)),
+        reply(tool_use("run_sql", "t2", sql=LOOKUP)),
+        reply(tool_use("run_sql", "t3", sql=BORDEAUX)),
+        reply(
+            tool_use(
+                "submit_answer", "t4", behavior="answer", message="ok", sql=BORDEAUX
+            )
+        ),
+    )
+    db = FakeDb()
+    answer = engine(client, db).ask("Combien de ventes à Bordeaux ?")
+    assert answer.behavior == "answer"
+    assert db.ran == [LOOKUP, BORDEAUX] == answer.executed_sql
+    first = client.calls[1]["messages"][-1]["content"][0]
+    assert first["is_error"] and "33063 not looked up" in first["content"]
+    assert "chercher_commune" in first["content"]
+
+
+def test_commune_code_written_in_the_question_is_allowed() -> None:
+    client = FakeClient(
+        reply(tool_use("run_sql", sql=BORDEAUX)),
+        reply(
+            tool_use(
+                "submit_answer", "t2", behavior="answer", message="ok", sql=BORDEAUX
+            )
+        ),
+    )
+    db = FakeDb()
+    answer = engine(client, db).ask("Combien de ventes dans la commune 33063 ?")
+    assert answer.behavior == "answer"
+    assert db.ran == [BORDEAUX]
+
+
+def test_unseen_commune_code_in_the_final_sql_is_rejected() -> None:
+    client = FakeClient(
+        reply(tool_use("submit_answer", behavior="answer", message="?", sql=BORDEAUX)),
+        reply(
+            tool_use("submit_answer", "t2", behavior="clarify", message="Laquelle ?")
+        ),
+    )
+    db = FakeDb()
+    answer = engine(client, db).ask("Combien de ventes ?")
+    assert answer.behavior == "clarify"
+    assert db.ran == []
+    first = client.calls[1]["messages"][-1]["content"][0]
+    assert first["is_error"] and "final sql rejected" in first["content"]
+
+
 def test_failed_final_sql_goes_back_to_the_model() -> None:
     bad = "SELECT nope FROM dvf.ventes"
     client = FakeClient(
@@ -175,9 +234,53 @@ def test_text_only_reply_is_nudged_then_turn_budget_ends_in_error() -> None:
     answer = engine(client).ask("?")
     assert answer.behavior == "error"
     assert "no submit_answer after 4 turns" in answer.error
-    assert (
-        client.calls[1]["messages"][-1]["content"] == "Finish by calling submit_answer."
+    assert client.calls[1]["messages"][-1]["content"] == NUDGE
+
+
+def text(value: str) -> SimpleNamespace:
+    return reply(SimpleNamespace(type="text", text=value))
+
+
+def test_submit_answer_written_as_text_is_accepted() -> None:
+    # qwen3:30b-a3b on Ollama: the arguments as a JSON text, no tool call.
+    submission = json.dumps({"behavior": "answer", "message": "317", "sql": COUNT})
+    client = FakeClient(reply(tool_use("run_sql", sql=COUNT)), text(submission))
+    db = FakeDb()
+    answer = engine(client, db).ask("Combien de ventes en 2024 ?")
+    assert answer.behavior == "answer"
+    assert answer.submitted_as_text
+    assert (answer.sql, answer.rows) == (COUNT, [[29200]])
+    assert db.ran == [COUNT]
+
+
+def test_text_submission_goes_through_the_same_checks() -> None:
+    # Not seen yet: the result goes back as text, then the tool call is accepted.
+    submission = "answer " + json.dumps(
+        {"behavior": "answer", "message": "125", "sql": COUNT}
     )
+    client = FakeClient(
+        text(submission),
+        reply(
+            tool_use("submit_answer", behavior="answer", message="29 200", sql=COUNT)
+        ),
+    )
+    answer = engine(client).ask("?")
+    assert answer.behavior == "answer" and not answer.submitted_as_text
+    assert answer.message == "29 200"
+    feedback = client.calls[1]["messages"][-1]["content"]
+    assert "not_accepted_yet" in feedback and NUDGE in feedback
+
+
+def test_text_without_a_valid_submission_is_nudged() -> None:
+    client = FakeClient(
+        text('{"behavior": "maybe"}'),
+        text("{not json"),
+        reply(tool_use("submit_answer", behavior="clarify", message="Laquelle ?")),
+    )
+    answer = engine(client).ask("?")
+    assert answer.behavior == "clarify"
+    assert client.calls[1]["messages"][-1]["content"] == NUDGE
+    assert client.calls[2]["messages"][-1]["content"] == NUDGE
 
 
 def test_invalid_behavior_is_rejected() -> None:

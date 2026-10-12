@@ -33,6 +33,12 @@ question ─► Claude ──run_sql──► guard ─► read-only Postgres   
   runs it, shows the result, and the model must submit again. Otherwise the
   figures in its message could be guesses that contradict the rows the API
   returns (seen with a local 14B model: "125 ventes" over a result of 899).
+- **Commune codes are looked up, never typed**: a query comparing a commune
+  column with a code the model has not seen (in an earlier result or in the
+  question) is rejected before execution, with a pointer to
+  `dvf.chercher_commune`. With prompting alone, qwen3:14b still typed codes
+  from memory in 38 of 159 questions (postal codes 33000 / 33001, or 33012,
+  for Bordeaux).
 - **Safety**, three layers on every statement:
   1. `guard.py` (sqlglot): one statement, a query, only `dvf.ventes`, `biens`,
      `lieux`, `zones`, `communes`. No data-modifying CTE, no `SELECT INTO` or
