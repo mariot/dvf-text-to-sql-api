@@ -19,6 +19,10 @@ Answers written as text: some local models (qwen3:30b-a3b on Ollama) write
 the submit_answer arguments as a JSON text instead of a tool call, again and
 again until the turn budget runs out. A text reply holding a valid
 submit_answer object goes through exactly the same checks as the tool call.
+
+Review: a final query with a common slip (sales not filtered with est_vente,
+a statistic without its count) goes back ONCE with a note; the same query is
+accepted on resubmission, since some questions are about every mutation.
 """
 
 import datetime as dt
@@ -35,7 +39,13 @@ import psycopg
 
 from dvf_sql import ENGINE_VERSION
 from dvf_sql.db import Database, QueryResult
-from dvf_sql.guard import COMMUNE_CODE, UnsafeSQLError, check_sql, commune_codes
+from dvf_sql.guard import (
+    COMMUNE_CODE,
+    UnsafeSQLError,
+    check_sql,
+    commune_codes,
+    review_notes,
+)
 from dvf_sql.prompt import build_system_prompt
 
 BEHAVIORS = ("answer", "clarify", "unanswerable", "refuse")
@@ -172,6 +182,7 @@ class Trace:
     seen: dict[str, QueryResult] = field(default_factory=dict)  # results shown
     # Commune codes the model may use: shown in a result, or in the question.
     known_codes: set[str] = field(default_factory=set)
+    reviewed: set[str] = field(default_factory=set)  # final queries already noted
 
     def remember_codes(self, shown: dict[str, Any]) -> None:
         for row in shown["rows"]:
@@ -348,7 +359,10 @@ class Engine:
         if not sql:
             return tool_result(block.id, "behavior answer requires the final sql", True)
 
-        result = trace.seen.get(normalize_sql(sql))
+        key = normalize_sql(sql)
+        notes = [] if key in trace.reviewed else review_notes(sql)
+        trace.reviewed.add(key)
+        result = trace.seen.get(key)
         if result is None:
             # The model has not seen this result: whatever figures its message
             # holds were not read from it. Show it, and ask for a resubmit.
@@ -360,7 +374,7 @@ class Engine:
                 )
             except psycopg.Error as exc:
                 return tool_result(block.id, f"final sql failed: {exc}", True)
-            trace.seen[normalize_sql(sql)] = result
+            trace.seen[key] = result
             shown = preview(result)
             trace.remember_codes(shown)
             return tool_result(
@@ -372,7 +386,20 @@ class Engine:
                         "again: the same sql if it is right (or a corrected one), "
                         "and a message whose figures come from this result."
                     ),
+                    **({"check": notes} if notes else {}),
                     "result": shown,
+                },
+            )
+        if notes:
+            return tool_result(
+                block.id,
+                {
+                    "not_accepted_yet": (
+                        "Check these points, then call submit_answer again: the "
+                        "same sql if it is right as it is, or a corrected one."
+                    ),
+                    "check": notes,
+                    "result": preview(result),
                 },
             )
         answer.sql = sql

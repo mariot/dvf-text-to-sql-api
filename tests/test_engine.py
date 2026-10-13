@@ -158,7 +158,9 @@ def test_whitespace_and_semicolon_do_not_count_as_a_new_query() -> None:
 
 
 LOOKUP = "SELECT * FROM dvf.chercher_commune('Bordeaux')"
-BORDEAUX = "SELECT count(*) AS n FROM dvf.ventes WHERE code_commune = '33063'"
+BORDEAUX = (
+    "SELECT count(*) AS n FROM dvf.ventes WHERE code_commune = '33063' AND est_vente"
+)
 
 
 def test_commune_code_typed_from_memory_is_rejected_until_looked_up() -> None:
@@ -311,3 +313,65 @@ def test_api_options() -> None:
     Engine(FakeDb(), client, model="m", thinking=False).ask("?")
     assert "thinking" not in client.calls[0]
     assert "output_config" not in client.calls[0]
+
+
+ALL_MUTATIONS = "SELECT count(*) AS n FROM dvf.ventes WHERE annee = 2024"
+MEDIAN = (
+    "SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY prix_m2) AS m "
+    "FROM dvf.ventes WHERE annee = 2024 AND vente_reference"
+)
+
+
+def test_final_query_with_a_common_slip_is_noted_once_then_accepted() -> None:
+    # Same query resubmitted: accepted (a question can be about every mutation).
+    client = FakeClient(
+        reply(tool_use("run_sql", sql=ALL_MUTATIONS)),
+        reply(
+            tool_use(
+                "submit_answer", "t2", behavior="answer", message="1", sql=ALL_MUTATIONS
+            )
+        ),
+        reply(
+            tool_use(
+                "submit_answer", "t3", behavior="answer", message="1", sql=ALL_MUTATIONS
+            )
+        ),
+    )
+    answer = engine(client).ask("Combien de mutations en 2024 ?")
+    assert answer.behavior == "answer" and answer.turns == 3
+    note = client.calls[2]["messages"][-1]["content"][0]
+    assert not note["is_error"]
+    assert "not_accepted_yet" in note["content"] and "est_vente" in note["content"]
+
+
+def test_corrected_query_after_a_note_is_accepted() -> None:
+    client = FakeClient(
+        reply(tool_use("run_sql", sql=ALL_MUTATIONS)),
+        reply(
+            tool_use(
+                "submit_answer", "t2", behavior="answer", message="1", sql=ALL_MUTATIONS
+            )
+        ),
+        reply(tool_use("run_sql", "t3", sql=COUNT)),
+        reply(
+            tool_use(
+                "submit_answer", "t4", behavior="answer", message="29 200", sql=COUNT
+            )
+        ),
+    )
+    answer = engine(client).ask("Combien de ventes en 2024 ?")
+    assert (answer.behavior, answer.sql, answer.turns) == ("answer", COUNT, 4)
+
+
+def test_statistic_without_count_is_noted_and_unseen_query_gets_both() -> None:
+    # Never run: the result and the note come back together, in one turn.
+    client = FakeClient(
+        reply(tool_use("submit_answer", behavior="answer", message="?", sql=MEDIAN)),
+        reply(
+            tool_use("submit_answer", "t2", behavior="answer", message="ok", sql=MEDIAN)
+        ),
+    )
+    answer = engine(client).ask("Prix médian au m² en 2024 ?")
+    assert answer.behavior == "answer" and answer.turns == 2
+    first = client.calls[1]["messages"][-1]["content"][0]["content"]
+    assert "count(prix_m2)" in first and "You had not seen" in first

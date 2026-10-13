@@ -13,7 +13,7 @@ The rules:
     communes, and the housing / living-environment views: loyers,
     logements_sociaux, logements_vacants, series_longues, cout_logement_social,
     ecoles, ecoles_ips, colleges_ivac, arrets_transport, dpe, acces_adresses,
-    temps_trajet)
+    temps_trajet, quartiers, iris)
     and the query's own CTEs. No raw table, no system catalog;
   * functions: no server, file, session or sleep functions (pg_*, lo_*,
     dblink, set_config, version(), inet_server_addr()...).
@@ -44,6 +44,8 @@ ALLOWED_TABLES = frozenset(
         "dpe",
         "acces_adresses",
         "temps_trajet",
+        "quartiers",
+        "iris",
     }
 )
 
@@ -169,3 +171,44 @@ def commune_codes(sql: str) -> set[str]:
             ):
                 codes.add(literal.this)
     return codes
+
+
+SALES_TABLES = frozenset({"ventes", "biens"})
+SALES_COLUMNS = frozenset(
+    {"est_vente", "vente_reference", "prix_m2", "nature_mutation"}
+)
+STATISTICS: tuple[type[exp.Expression], ...] = (
+    exp.PercentileCont,
+    exp.PercentileDisc,
+    exp.Avg,
+    exp.Median,
+)
+SALES_NOTE = (
+    "This query reads dvf.ventes / dvf.biens without est_vente (or "
+    "vente_reference / prix_m2): it counts every mutation, including Echange "
+    "and Expropriation. If the question is about sales, add est_vente."
+)
+COUNT_NOTE = (
+    "This statistic comes without the number of sales it is computed on: add "
+    "it next to it (count(prix_m2) for a prix_m2 statistic, else count(*))."
+)
+
+
+def review_notes(sql: str) -> list[str]:
+    """Common slips in a final query, for the model to check (not errors).
+
+    Not safety rules: the engine shows them once and accepts the same query
+    on resubmission, since a question can be about every mutation.
+    """
+    try:
+        tree = sqlglot.parse_one(sql, read="postgres")
+    except ParseError, TokenError:
+        return []
+    tables = {t.name.lower() for t in tree.find_all(exp.Table)}
+    columns = {c.name.lower() for c in tree.find_all(exp.Column)}
+    notes = []
+    if tables & SALES_TABLES and not columns & SALES_COLUMNS:
+        notes.append(SALES_NOTE)
+    if any(tree.find_all(*STATISTICS)) and not any(tree.find_all(exp.Count)):
+        notes.append(COUNT_NOTE)
+    return notes

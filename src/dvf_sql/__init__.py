@@ -17,4 +17,12 @@
 #        is rejected before execution, with a pointer to dvf.chercher_commune
 #        submit_answer arguments written as a JSON text (not a tool call) are
 #        accepted, with the same checks; the nudge asks for a tool call
-ENGINE_VERSION = "0.6"
+#   0.7  quartiers and IRIS (dvf.quartiers, dvf.iris, ventes.quartier, zones that
+#        hold part of a commune: Rive droite); stricter clarification (ask,
+#        don't assume: kind of property, undefined words, advice); a final
+#        query that reads sales without est_vente, or gives a statistic
+#        without its count, goes back once with a note; conventions spelled
+#        out: a "prix moyen" = the median (with the mean next to it),
+#        postal codes, variations in %, landmarks in
+#        dvf.lieux, count(prix_m2) next to a prix_m2 statistic
+ENGINE_VERSION = "0.7"

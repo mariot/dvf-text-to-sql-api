@@ -1,6 +1,13 @@
 import pytest
 
-from dvf_sql.guard import UnsafeSQLError, check_sql, commune_codes
+from dvf_sql.guard import (
+    COUNT_NOTE,
+    SALES_NOTE,
+    UnsafeSQLError,
+    check_sql,
+    commune_codes,
+    review_notes,
+)
 
 ALLOWED = [
     "SELECT count(*) FROM dvf.ventes WHERE annee = 2024 AND est_vente",
@@ -118,3 +125,35 @@ def test_cte_name_cannot_shadow_a_schema_table() -> None:
 )
 def test_commune_codes(sql: str, codes: set[str]) -> None:
     assert commune_codes(sql) == codes
+
+
+@pytest.mark.parametrize(
+    ("sql", "notes"),
+    [
+        ("SELECT count(*) FROM dvf.ventes WHERE annee = 2024", [SALES_NOTE]),
+        ("SELECT count(*) FROM dvf.biens b WHERE b.annee = 2024", [SALES_NOTE]),
+        ("SELECT count(*) FROM dvf.ventes WHERE annee = 2024 AND est_vente", []),
+        (
+            "SELECT avg(prix_m2) FROM dvf.ventes WHERE annee = 2024",
+            [COUNT_NOTE],
+        ),
+        (
+            (
+                "SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY valeur_fonciere), "
+                "count(*) FROM dvf.ventes WHERE vente_reference"
+            ),
+            [],
+        ),
+        (
+            (
+                "SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY loyer_m2) "
+                "FROM dvf.loyers WHERE annee = 2025"
+            ),
+            [COUNT_NOTE],
+        ),
+        ("SELECT loyer_m2 FROM dvf.loyers WHERE annee = 2025", []),
+        ("SELEC nonsense", []),
+    ],
+)
+def test_review_notes(sql: str, notes: list[str]) -> None:
+    assert review_notes(sql) == notes

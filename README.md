@@ -39,10 +39,21 @@ question ─► Claude ──run_sql──► guard ─► read-only Postgres   
   `dvf.chercher_commune`. With prompting alone, qwen3:14b still typed codes
   from memory in 38 of 159 questions (postal codes 33000 / 33001, or 33012,
   for Bordeaux).
+- **Review of the final query**: a final query that reads `dvf.ventes` /
+  `dvf.biens` without `est_vente` (it then counts exchanges and
+  expropriations too), or gives a statistic without its count, goes back
+  once with a note and its result. The same query is accepted on
+  resubmission: some questions are about every mutation. With engine 0.6,
+  22 of the wrong answers had forgotten the sales filter.
+- **Answers written as text**: some local models write the `submit_answer`
+  arguments as JSON text instead of a tool call. That text goes through the
+  same checks as the tool call (`submitted_as_text`).
 - **Safety**, three layers on every statement:
-  1. `guard.py` (sqlglot): one statement, a query, only `dvf.ventes`, `biens`,
-     `lieux`, `zones`, `communes`. No data-modifying CTE, no `SELECT INTO` or
-     `FOR UPDATE`, and no server, file, session or sleep functions.
+  1. `guard.py` (sqlglot): one statement, a query, only the views of the
+     semantic layer (`ALLOWED_TABLES`: sales, communes, zones, quartiers,
+     IRIS, rents, schools, transport, energy...). No data-modifying CTE, no
+     `SELECT INTO` or `FOR UPDATE`, and no server, file, session or sleep
+     functions.
   2. A read-only transaction with a 30 s statement timeout, rolled back.
   3. A prepared statement, which cannot hold two statements, so
      `SELECT 1; COMMIT; DROP ...` can't escape the transaction.

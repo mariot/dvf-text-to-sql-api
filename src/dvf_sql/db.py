@@ -94,6 +94,8 @@ class Database:
                 "FROM dvf.biens ORDER BY 1",
                 "dvf.lieux.nom": "SELECT nom FROM dvf.lieux ORDER BY 1",
                 "dvf.zones.zone": "SELECT DISTINCT zone FROM dvf.zones ORDER BY 1",
+                "dvf.ventes.quartier (Bordeaux)": "SELECT nom FROM dvf.ref_quartiers "
+                "WHERE code_commune = '33063' ORDER BY 1",
                 "dvf.loyers.segment": "SELECT DISTINCT segment FROM dvf.loyers ORDER BY 1",
                 "dvf.loyers.annee": "SELECT DISTINCT annee FROM dvf.loyers ORDER BY 1",
                 "dvf.logements_sociaux.annee": "SELECT DISTINCT annee "
