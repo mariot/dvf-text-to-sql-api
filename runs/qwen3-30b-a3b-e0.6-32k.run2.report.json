@@ -1,5 +1,5 @@
 {
- "eval_version": "1.6",
+ "eval_version": "1.7",
  "dvf_release": "2026-04",
  "predictions": "../dvf-text-to-sql-api/runs/qwen3-30b-a3b-e0.6-32k.run2.jsonl",
  "items": [
@@ -147,10 +147,10 @@
    "category": "aggregation",
    "expected": "answer",
    "predicted": "answer",
-   "pass": false,
-   "verdict": "wrong",
-   "reason": "values differ (gold [[4434.0]], predicted [[4408.0]])",
-   "relaxed": false
+   "pass": true,
+   "verdict": "strict",
+   "reason": "",
+   "relaxed": true
   },
   {
    "id": "agg-04",
@@ -800,7 +800,7 @@
    "predicted": "answer",
    "pass": false,
    "verdict": "wrong",
-   "reason": "values differ (gold [['Floirac', 238, 35.3, 29.8], ['Le Bouscat', 422, 37.2, 41.9]], predicted [['Ambarès-et-Lagrave', 123, 33, 156, 78.8, 21.2], ['Ambès', 16, 19, 35, 45.7, 54.3]])",
+   "reason": "values differ (gold [['Floirac', 238, 35.3, 29.8], ['Saint-Louis-de-Montferrand', 25, 60.0, 32.0]], predicted [['Ambarès-et-Lagrave', 123, 33, 156, 78.8, 21.2], ['Ambès', 16, 19, 35, 45.7, 54.3]])",
    "relaxed": false
   },
   {
@@ -888,10 +888,10 @@
    "category": "data_quality",
    "expected": "answer",
    "predicted": "answer",
-   "pass": false,
-   "verdict": "wrong",
-   "reason": "values differ (gold [[4319.0]], predicted [[4217.39, 2867]])",
-   "relaxed": false
+   "pass": true,
+   "verdict": "strict",
+   "reason": "",
+   "relaxed": true
   },
   {
    "id": "dq-05",
@@ -1120,12 +1120,12 @@
   },
   {
    "id": "amb-08",
-   "category": "ambiguous",
-   "expected": "clarify",
+   "category": "spatial",
+   "expected": "answer",
    "predicted": "unanswerable",
    "pass": false,
    "verdict": "wrong_behavior",
-   "reason": "unanswerable instead of clarify"
+   "reason": "unanswerable instead of answer"
   },
   {
    "id": "amb-09",
@@ -1152,7 +1152,7 @@
    "predicted": "answer",
    "pass": false,
    "verdict": "wrong",
-   "reason": "values differ (gold [[651140.0, 78]], predicted [[2624.42, 78]])",
+   "reason": "values differ (gold [[272374.0, 78]], predicted [[2624.42, 78]])",
    "relaxed": false
   },
   {
@@ -1176,12 +1176,12 @@
   },
   {
    "id": "una-03",
-   "category": "unanswerable",
-   "expected": "unanswerable",
+   "category": "aggregation",
+   "expected": "answer",
    "predicted": "unanswerable",
-   "pass": true,
-   "verdict": "pass",
-   "reason": ""
+   "pass": false,
+   "verdict": "wrong_behavior",
+   "reason": "unanswerable instead of answer"
   },
   {
    "id": "una-04",

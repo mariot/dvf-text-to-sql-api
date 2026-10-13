@@ -1,5 +1,5 @@
 {
- "eval_version": "1.6",
+ "eval_version": "1.7",
  "dvf_release": "2026-04",
  "predictions": "../dvf-text-to-sql-api/runs/qwen3-30b-a3b-e0.6-32k.jsonl",
  "items": [
@@ -146,10 +146,10 @@
    "category": "aggregation",
    "expected": "answer",
    "predicted": "answer",
-   "pass": false,
-   "verdict": "wrong",
-   "reason": "values differ (gold [[4434.0]], predicted [[4408.245000000001, 336]])",
-   "relaxed": false
+   "pass": true,
+   "verdict": "strict",
+   "reason": "",
+   "relaxed": true
   },
   {
    "id": "agg-04",
@@ -891,10 +891,10 @@
    "category": "data_quality",
    "expected": "answer",
    "predicted": "answer",
-   "pass": true,
-   "verdict": "strict",
-   "reason": "",
-   "relaxed": true
+   "pass": false,
+   "verdict": "wrong",
+   "reason": "values differ (gold [[4217.0]], predicted [[4319.0, 2867]])",
+   "relaxed": false
   },
   {
    "id": "dq-05",
@@ -1123,12 +1123,12 @@
   },
   {
    "id": "amb-08",
-   "category": "ambiguous",
-   "expected": "clarify",
+   "category": "spatial",
+   "expected": "answer",
    "predicted": "unanswerable",
    "pass": false,
    "verdict": "wrong_behavior",
-   "reason": "unanswerable instead of clarify"
+   "reason": "unanswerable instead of answer"
   },
   {
    "id": "amb-09",
@@ -1155,7 +1155,7 @@
    "predicted": "answer",
    "pass": false,
    "verdict": "wrong",
-   "reason": "values differ (gold [[651140.0, 78]], predicted [[272374.5, 78]])",
+   "reason": "values differ (gold [[272374.0, 78]], predicted [[272374.5, 78]])",
    "relaxed": false
   },
   {
@@ -1179,12 +1179,12 @@
   },
   {
    "id": "una-03",
-   "category": "unanswerable",
-   "expected": "unanswerable",
+   "category": "aggregation",
+   "expected": "answer",
    "predicted": "unanswerable",
-   "pass": true,
-   "verdict": "pass",
-   "reason": ""
+   "pass": false,
+   "verdict": "wrong_behavior",
+   "reason": "unanswerable instead of answer"
   },
   {
    "id": "una-04",
